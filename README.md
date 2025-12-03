@@ -20,7 +20,7 @@ This project strictly follows a **3-Tier Architecture** (Frontend â†’ Backend â†
 ## 3. Data Structures Implementation
 ### A. B-Tree (Primary Index - 100% Focus)
 *   **Usage:** Used to store and index **Gene IDs** (Integers).
-*   **Disk Manipulation:** The B-Tree is not just in RAM; it writes nodes to a hard disk file (`genes.dat`). This allows the system to handle data larger than the available memory.
+*   **Disk Manipulation:** The B-Tree is not just in the RAM; it writes nodes to a hard disk file (`genes.dat`). This allows the system to handle data larger than the available memory.
 *   **Operations:** Insert, Delete, Search, and Range Query (e.g., "Find genes 100 to 500").
 
 ### B. Hashing (Secondary Index - 40% Focus)
