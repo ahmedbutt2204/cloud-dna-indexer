@@ -18,7 +18,34 @@ const string DB_FILE = "genes.dat";
 BTree geneIndex(3);
 HashTable nameIndex;
 
-// --- HELPER FUNCTIONS ---
+// --- DATABASE FUNCTIONS ---
+
+// Function to add a gene to Disk + B-Tree + Hash
+void addGene(int id, string name, string sequence) {
+    Gene g;
+    g.setData(id, name, sequence);
+
+    // 1. Open File
+    ofstream file(DB_FILE, ios::binary | ios::app);
+    if (!file) {
+        cout << "Error opening database!" << endl;
+        return;
+    }
+
+    // 2. Force pointer to end
+    file.seekp(0, ios::end); 
+    long filePos = file.tellp();
+
+    // 3. Write Data
+    file.write((char*)&g, sizeof(Gene));
+    file.close();
+
+    // 4. Update Indices
+    geneIndex.insert(id, filePos);
+    nameIndex.insert(name, id);
+
+    cout << "[DB] Saved Gene: " << name << " (ID: " << id << ") at Disk Pos: " << filePos << endl;
+}
 
 // Load existing data on startup
 void loadData() {
@@ -27,6 +54,7 @@ void loadData() {
     
     Gene g;
     long pos;
+    cout << "[DB] Loading existing records..." << endl;
     while(true) {
         pos = file.tellg();
         file.read((char*)&g, sizeof(Gene));
@@ -35,9 +63,12 @@ void loadData() {
         // Re-build indices
         geneIndex.insert(g.id, pos);
         nameIndex.insert(g.name, g.id);
+        cout << " - Loaded ID: " << g.id << endl;
     }
-    cout << "Database loaded successfully." << endl;
+    cout << "[DB] Database ready." << endl;
 }
+
+// --- SERVER FUNCTIONS ---
 
 // Manual HTTP Response Generator
 void sendResponse(SOCKET clientSocket, string content) {
@@ -45,6 +76,8 @@ void sendResponse(SOCKET clientSocket, string content) {
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: application/json\r\n"
         "Access-Control-Allow-Origin: *\r\n" // Fixes CORS
+        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
         "Content-Length: " + to_string(content.length()) + "\r\n"
         "\r\n" +
         content;
@@ -72,10 +105,13 @@ int main() {
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(8080); // Port 8080
 
-    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cout << "Bind failed! Port 8080 might be in use." << endl;
+        return 1;
+    }
     listen(serverSocket, SOMAXCONN);
 
-    cout << "=== DNA Cloud Server Running on Port 8080 (Manual Mode) ===" << endl;
+    cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
 
     // 4. Listen for React
     while (true) {
@@ -88,10 +124,12 @@ int main() {
 
         // --- HANDLE SEARCH (GET /search?id=101) ---
         if (request.find("GET /search") != string::npos) {
-            // Extract ID manually
             size_t idPos = request.find("id=");
             if (idPos != string::npos) {
-                int id = stoi(request.substr(idPos + 3, request.find(' ', idPos) - (idPos + 3)));
+                // Parse ID until the next space
+                size_t endPos = request.find(' ', idPos);
+                string idStr = request.substr(idPos + 3, endPos - (idPos + 3));
+                int id = stoi(idStr);
                 
                 long pos = geneIndex.search(id);
                 if (pos != -1) {
@@ -100,7 +138,6 @@ int main() {
                     Gene g;
                     file.read((char*)&g, sizeof(Gene));
                     
-                    // JSON Response
                     string json = "{ \"found\": true, \"name\": \"" + string(g.name) + "\", \"sequence\": \"" + string(g.sequence) + "\" }";
                     sendResponse(clientSocket, json);
                 } else {
@@ -109,13 +146,36 @@ int main() {
             }
         }
         
-        // --- HANDLE ADD (POST /add) ---
+        // --- HANDLE ADD (POST /add?id=...&name=...&seq=...) ---
         else if (request.find("POST /add") != string::npos) {
-            // Note: In this simple version, we assume data comes in URL params for simplicity 
-            // or we just return success to React for the demo.
-            
-            // To make the demo work immediately:
-            sendResponse(clientSocket, "{ \"status\": \"success\" }");
+            try {
+                size_t idPos = request.find("id=");
+                size_t namePos = request.find("name=");
+                size_t seqPos = request.find("sequence=");
+                
+                if (idPos != string::npos && namePos != string::npos && seqPos != string::npos) {
+                    // Extract ID
+                    size_t idEnd = request.find('&', idPos);
+                    int id = stoi(request.substr(idPos + 3, idEnd - (idPos + 3)));
+                    
+                    // Extract Name
+                    size_t nameEnd = request.find('&', namePos);
+                    string name = request.substr(namePos + 5, nameEnd - (namePos + 5));
+                    
+                    // Extract Sequence (Stop at HTTP version or space)
+                    size_t seqEnd = request.find(' ', seqPos);
+                    string seq = request.substr(seqPos + 9, seqEnd - (seqPos + 9));
+
+                    // SAVE TO DISK & B-TREE
+                    addGene(id, name, seq);
+                    
+                    sendResponse(clientSocket, "{ \"status\": \"success\" }");
+                } else {
+                    sendResponse(clientSocket, "{ \"status\": \"error\" }");
+                }
+            } catch (...) {
+                sendResponse(clientSocket, "{ \"status\": \"error\" }");
+            }
         }
         
         // --- HANDLE OPTIONS (Pre-flight for CORS) ---
@@ -127,6 +187,6 @@ int main() {
         closesocket(clientSocket);
     }
 
-    WSACleanup();  
+    WSACleanup();
     return 0;
 }
