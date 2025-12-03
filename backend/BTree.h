@@ -1,4 +1,3 @@
-// FILE: backend/BTree.h
 #ifndef BTREE_H
 #define BTREE_H
 
@@ -7,10 +6,9 @@
 
 using namespace std;
 
-// A Class to manage the B-Tree
 class BTree {
-    BTreeNode *root; // Pointer to root node
-    int t;           // Minimum degree
+    BTreeNode *root;
+    int t; // Minimum degree
 
 public:
     BTree(int _t) {
@@ -18,12 +16,7 @@ public:
         t = _t;
     }
 
-    // Function to traverse the tree
-    void traverse() {
-        if (root != NULL) root->traverse();
-    }
-
-    // Function to search a key in this tree
+    // SEARCH FUNCTION
     long search(int k) {
         return (root == NULL) ? -1 : searchRecursive(root, k);
     }
@@ -32,17 +25,14 @@ public:
         int i = 0;
         while (i < node->n && k > node->keys[i])
             i++;
-
         if (i < node->n && node->keys[i] == k)
             return node->filePositions[i];
-
         if (node->leaf)
             return -1;
-
         return searchRecursive(node->children[i], k);
     }
 
-    // The main function that inserts a new key
+    // INSERT FUNCTION
     void insert(int k, long filePos) {
         if (root == NULL) {
             root = new BTreeNode(t, true);
@@ -65,7 +55,6 @@ public:
     }
 
 private:
-    // Insert when node is not full
     void insertNonFull(BTreeNode *x, int k, long filePos) {
         int i = x->n - 1;
         if (x->leaf) {
@@ -87,36 +76,27 @@ private:
         }
     }
 
-    // Split the child y of node x
     void splitChild(BTreeNode *x, int i, BTreeNode *y) {
         BTreeNode *z = new BTreeNode(t, y->leaf);
         z->n = t - 1;
-
         for (int j = 0; j < t - 1; j++) {
             z->keys[j] = y->keys[j + t];
             z->filePositions[j] = y->filePositions[j + t];
         }
-
         if (!y->leaf) {
             for (int j = 0; j < t; j++)
                 z->children[j] = y->children[j + t];
         }
-
         y->n = t - 1;
-
         for (int j = x->n; j >= i + 1; j--)
             x->children[j + 1] = x->children[j];
-
         x->children[i + 1] = z;
-
         for (int j = x->n - 1; j >= i; j--) {
             x->keys[j + 1] = x->keys[j];
             x->filePositions[j + 1] = x->filePositions[j];
         }
-
         x->keys[i] = y->keys[t - 1];
         x->filePositions[i] = y->filePositions[t - 1];
-
         x->n = x->n + 1;
     }
 };

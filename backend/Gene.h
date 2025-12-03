@@ -24,7 +24,7 @@ struct Gene {
         std::strncpy(name, _name.c_str(), 49);
         std::strncpy(sequence, _seq.c_str(), 99);
         isDeleted = false;
-    }
+    } 
 };
 
 #endif
