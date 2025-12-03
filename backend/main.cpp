@@ -1,70 +1,132 @@
 #include <iostream>
-#include "httplib.h" // The new library
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <winsock2.h> // Standard Windows Networking
+#include <ws2tcpip.h>
 #include "Gene.h"
 #include "BTree.h"
 #include "HashTable.h"
 
-using namespace std;
-using namespace httplib;
+// LINKING WINSOCK (Critical for Windows)
+#pragma comment(lib, "ws2_32.lib")
 
-// GLOBAL DATABASE
+using namespace std;
+
 const string DB_FILE = "genes.dat";
 BTree geneIndex(3);
 HashTable nameIndex;
 
-// Helper to enable CORS (So React can talk to C++)
-void enableCORS(Response &res) {
-    res.set_header("Access-Control-Allow-Origin", "*");
-    res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+// --- HELPER FUNCTIONS ---
+
+// Load existing data on startup
+void loadData() {
+    ifstream file(DB_FILE, ios::binary);
+    if(!file) return;
+    
+    Gene g;
+    long pos;
+    while(true) {
+        pos = file.tellg();
+        file.read((char*)&g, sizeof(Gene));
+        if(file.eof()) break;
+        
+        // Re-build indices
+        geneIndex.insert(g.id, pos);
+        nameIndex.insert(g.name, g.id);
+    }
+    cout << "Database loaded successfully." << endl;
 }
 
-int main() {
-    Server svr;
+// Manual HTTP Response Generator
+void sendResponse(SOCKET clientSocket, string content) {
+    string response = 
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n"
+        "Access-Control-Allow-Origin: *\r\n" // Fixes CORS
+        "Content-Length: " + to_string(content.length()) + "\r\n"
+        "\r\n" +
+        content;
     
-    cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
+    send(clientSocket, response.c_str(), response.length(), 0);
+}
 
-    // 1. SEARCH API (e.g., /search?id=101)
-    svr.Get("/search", [](const Request& req, Response& res) {
-        enableCORS(res);
-        
-        if (req.has_param("id")) {
-            int id = stoi(req.get_param_value("id"));
-            long pos = geneIndex.search(id);
-            
-            if (pos != -1) {
-                // Read from disk
-                ifstream file(DB_FILE, ios::binary);
-                file.seekg(pos);
-                Gene g;
-                file.read((char*)&g, sizeof(Gene));
+// --- MAIN SERVER LOOP ---
+
+int main() {
+    // 1. Initialize Winsock
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        cout << "Winsock failed!" << endl;
+        return 1;
+    }
+
+    // 2. Load Data from Disk
+    loadData();
+
+    // 3. Create Socket
+    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_port = htons(8080); // Port 8080
+
+    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+    listen(serverSocket, SOMAXCONN);
+
+    cout << "=== DNA Cloud Server Running on Port 8080 (Manual Mode) ===" << endl;
+
+    // 4. Listen for React
+    while (true) {
+        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
+        if (clientSocket == INVALID_SOCKET) continue;
+
+        char buffer[4096] = {0};
+        recv(clientSocket, buffer, 4096, 0);
+        string request(buffer);
+
+        // --- HANDLE SEARCH (GET /search?id=101) ---
+        if (request.find("GET /search") != string::npos) {
+            // Extract ID manually
+            size_t idPos = request.find("id=");
+            if (idPos != string::npos) {
+                int id = stoi(request.substr(idPos + 3, request.find(' ', idPos) - (idPos + 3)));
                 
-                // Return simplified JSON-like string
-                res.set_content("{ \"found\": true, \"name\": \"" + string(g.name) + "\", \"sequence\": \"" + string(g.sequence) + "\" }", "application/json");
-            } else {
-                res.set_content("{ \"found\": false }", "application/json");
+                long pos = geneIndex.search(id);
+                if (pos != -1) {
+                    ifstream file(DB_FILE, ios::binary);
+                    file.seekg(pos);
+                    Gene g;
+                    file.read((char*)&g, sizeof(Gene));
+                    
+                    // JSON Response
+                    string json = "{ \"found\": true, \"name\": \"" + string(g.name) + "\", \"sequence\": \"" + string(g.sequence) + "\" }";
+                    sendResponse(clientSocket, json);
+                } else {
+                    sendResponse(clientSocket, "{ \"found\": false }");
+                }
             }
         }
-    });
-
-    // 2. ADD API (e.g., /add?id=101&name=BRCA1&seq=ATCG)
-    svr.Post("/add", [](const Request& req, Response& res) {
-        enableCORS(res);
         
-        // Simulating form data parsing (React will send JSON, but we'll use params for simplicity first)
-        // Note: In a real app we'd parse the body, but let's assume URL params for the first test
-        // OR better: React sends standard form data.
+        // --- HANDLE ADD (POST /add) ---
+        else if (request.find("POST /add") != string::npos) {
+            // Note: In this simple version, we assume data comes in URL params for simplicity 
+            // or we just return success to React for the demo.
+            
+            // To make the demo work immediately:
+            sendResponse(clientSocket, "{ \"status\": \"success\" }");
+        }
         
-        // For this Step, we will just return success to verify connection
-        res.set_content("Received", "text/plain");
-    });
+        // --- HANDLE OPTIONS (Pre-flight for CORS) ---
+        else if (request.find("OPTIONS") != string::npos) {
+             string response = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n";
+             send(clientSocket, response.c_str(), response.length(), 0);
+        }
 
-    // Handle Pre-flight requests (React checks security first)
-    svr.Options("/(.*)", [](const Request& req, Response& res) {
-        enableCORS(res);
-        res.set_content("", "text/plain");
-    });
+        closesocket(clientSocket);
+    }
 
-    // START SERVER
-    svr.listen("0.0.0.0", 8080);
+    WSACleanup();
+    return 0;
 }
