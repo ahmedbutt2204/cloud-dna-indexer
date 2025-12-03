@@ -63,7 +63,7 @@ void loadData() {
         // Re-build indices
         geneIndex.insert(g.id, pos);
         nameIndex.insert(g.name, g.id);
-        cout << " - Loaded ID: " << g.id << endl;
+        cout << " - Loaded ID: " << g.id << " (" << g.name << ")" << endl;
     }
     cout << "[DB] Database ready." << endl;
 }
@@ -113,7 +113,7 @@ int main() {
 
     cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
 
-    // 4. Listen for React 
+    // 4. Listen for React
     while (true) {
         SOCKET clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == INVALID_SOCKET) continue;
@@ -122,11 +122,13 @@ int main() {
         recv(clientSocket, buffer, 4096, 0);
         string request(buffer);
 
-        // --- HANDLE SEARCH (GET /search?id=101) ---
+        // --- HANDLE SEARCH (GET /search) ---
         if (request.find("GET /search") != string::npos) {
-            size_t idPos = request.find("id=");
-            if (idPos != string::npos) {
-                // Parse ID until the next space
+            
+            // OPTION A: Search by ID (B-Tree)
+            if (request.find("id=") != string::npos) {
+                size_t idPos = request.find("id=");
+                // Find end of ID (space or newline)
                 size_t endPos = request.find(' ', idPos);
                 string idStr = request.substr(idPos + 3, endPos - (idPos + 3));
                 int id = stoi(idStr);
@@ -137,8 +139,30 @@ int main() {
                     file.seekg(pos);
                     Gene g;
                     file.read((char*)&g, sizeof(Gene));
-                    
                     string json = "{ \"found\": true, \"name\": \"" + string(g.name) + "\", \"sequence\": \"" + string(g.sequence) + "\" }";
+                    sendResponse(clientSocket, json);
+                } else {
+                    sendResponse(clientSocket, "{ \"found\": false }");
+                }
+            }
+            // OPTION B: Search by Name (Hashing)
+            else if (request.find("name=") != string::npos) {
+                size_t namePos = request.find("name=");
+                size_t endPos = request.find(' ', namePos);
+                string name = request.substr(namePos + 5, endPos - (namePos + 5));
+                
+                // 1. Use Hash Table to find ID
+                int id = nameIndex.search(name);
+                
+                if (id != -1) {
+                    // 2. Use ID to search B-Tree
+                    long pos = geneIndex.search(id);
+                    ifstream file(DB_FILE, ios::binary);
+                    file.seekg(pos);
+                    Gene g;
+                    file.read((char*)&g, sizeof(Gene));
+                    
+                    string json = "{ \"found\": true, \"id\": " + to_string(g.id) + ", \"sequence\": \"" + string(g.sequence) + "\" }";
                     sendResponse(clientSocket, json);
                 } else {
                     sendResponse(clientSocket, "{ \"found\": false }");
@@ -146,7 +170,7 @@ int main() {
             }
         }
         
-        // --- HANDLE ADD (POST /add?id=...&name=...&seq=...) ---
+        // --- HANDLE ADD (POST /add) ---
         else if (request.find("POST /add") != string::npos) {
             try {
                 size_t idPos = request.find("id=");
