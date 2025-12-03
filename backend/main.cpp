@@ -1,85 +1,70 @@
 #include <iostream>
-#include <fstream>
+#include "httplib.h" // The new library
 #include "Gene.h"
 #include "BTree.h"
 #include "HashTable.h"
 
 using namespace std;
+using namespace httplib;
 
+// GLOBAL DATABASE
 const string DB_FILE = "genes.dat";
+BTree geneIndex(3);
+HashTable nameIndex;
 
-// GLOBAL DATA STRUCTURES
-BTree geneIndex(3);      // Handles ID Search (B-Tree)
-HashTable nameIndex;     // Handles Name Search (Hashing)
-
-// Function to add a gene
-void addGene(int id, string name, string sequence) {
-    Gene g;
-    g.setData(id, name, sequence);
-
-    // 1. Open File
-    ofstream file(DB_FILE, ios::binary | ios::app);
-    if (!file) {
-        cout << "Error opening database!" << endl;
-        return;
-    }
-
-    // 2. FIX: Force pointer to the end to get correct position
-    file.seekp(0, ios::end); 
-    long filePos = file.tellp();
-
-    // 3. Write Data
-    file.write((char*)&g, sizeof(Gene));
-    file.close();
-
-    // 4. Update Indices
-    geneIndex.insert(id, filePos);  // Update B-Tree
-    nameIndex.insert(name, id);     // Update Hash Table
-
-    cout << "Saved Gene: " << name << " (ID: " << id << ") at Disk Pos: " << filePos << endl;
-}
-
-// Search by ID (B-Tree)
-void searchByID(int id) {
-    long pos = geneIndex.search(id);
-    if (pos == -1) {
-        cout << "[Fail] ID " << id << " not found." << endl;
-        return;
-    }
-
-    ifstream file(DB_FILE, ios::binary);
-    file.seekg(pos);
-    Gene g;
-    file.read((char*)&g, sizeof(Gene));
-    cout << "[Found via B-Tree] ID: " << g.id << " | Name: " << g.name << endl;
-}
-
-// Search by Name (Hashing)
-void searchByName(string name) {
-    // 1. Get ID from Hash Table
-    int id = nameIndex.search(name);
-    if (id == -1) {
-        cout << "[Fail] Name '" << name << "' not found." << endl;
-        return;
-    }
-    
-    // 2. Use that ID to search B-Tree
-    cout << "[Found via Hashing] Name '" << name << "' maps to ID " << id << ". Fetching..." << endl;
-    searchByID(id);
+// Helper to enable CORS (So React can talk to C++)
+void enableCORS(Response &res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
 }
 
 int main() {
-    cout << "=== DNA Indexer (Final Backend) ===" << endl;
+    Server svr;
+    
+    cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
 
-    // Add Data
-    addGene(101, "BRCA1", "ATCG-SEQ-1");
-    addGene(202, "TP53", "GGGG-SEQ-2");
-    addGene(500, "EGFR", "AAAA-SEQ-3");
+    // 1. SEARCH API (e.g., /search?id=101)
+    svr.Get("/search", [](const Request& req, Response& res) {
+        enableCORS(res);
+        
+        if (req.has_param("id")) {
+            int id = stoi(req.get_param_value("id"));
+            long pos = geneIndex.search(id);
+            
+            if (pos != -1) {
+                // Read from disk
+                ifstream file(DB_FILE, ios::binary);
+                file.seekg(pos);
+                Gene g;
+                file.read((char*)&g, sizeof(Gene));
+                
+                // Return simplified JSON-like string
+                res.set_content("{ \"found\": true, \"name\": \"" + string(g.name) + "\", \"sequence\": \"" + string(g.sequence) + "\" }", "application/json");
+            } else {
+                res.set_content("{ \"found\": false }", "application/json");
+            }
+        }
+    });
 
-    cout << "\n--- Testing Search ---" << endl;
-    searchByID(202);          // Uses B-Tree
-    searchByName("EGFR");     // Uses Hashing -> B-Tree
-    searchByName("UNKNOWN");  // Should fail
+    // 2. ADD API (e.g., /add?id=101&name=BRCA1&seq=ATCG)
+    svr.Post("/add", [](const Request& req, Response& res) {
+        enableCORS(res);
+        
+        // Simulating form data parsing (React will send JSON, but we'll use params for simplicity first)
+        // Note: In a real app we'd parse the body, but let's assume URL params for the first test
+        // OR better: React sends standard form data.
+        
+        // For this Step, we will just return success to verify connection
+        res.set_content("Received", "text/plain");
+    });
 
-    return 0;
+    // Handle Pre-flight requests (React checks security first)
+    svr.Options("/(.*)", [](const Request& req, Response& res) {
+        enableCORS(res);
+        res.set_content("", "text/plain");
+    });
+
+    // START SERVER
+    svr.listen("0.0.0.0", 8080);
 }
