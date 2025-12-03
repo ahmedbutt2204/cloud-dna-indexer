@@ -113,7 +113,7 @@ int main() {
 
     cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
 
-    // 4. Listen for React
+    // 4. Listen for React 
     while (true) {
         SOCKET clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == INVALID_SOCKET) continue;
