@@ -3,6 +3,7 @@
 
 #include "BTreeNode.h"
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -16,7 +17,7 @@ public:
         t = _t;
     }
 
-    // SEARCH FUNCTION
+    // --- STANDARD SEARCH (Single Item) ---
     long search(int k) {
         return (root == NULL) ? -1 : searchRecursive(root, k);
     }
@@ -32,7 +33,38 @@ public:
         return searchRecursive(node->children[i], k);
     }
 
-    // INSERT FUNCTION
+    // --- NEW FEATURE: RANGE SEARCH (Find IDs between min and max) ---
+    // Returns a list of File Positions
+    void searchRange(int minK, int maxK, vector<long> &results) {
+        if (root != NULL) {
+            searchRangeRecursive(root, minK, maxK, results);
+        }
+    }
+
+    void searchRangeRecursive(BTreeNode* node, int minK, int maxK, vector<long> &results) {
+        int i = 0;
+        
+        // 1. Skip keys that are smaller than minK
+        while (i < node->n && node->keys[i] < minK)
+            i++;
+
+        // 2. Iterate through valid keys in this node
+        while (i < node->n && node->keys[i] <= maxK) {
+            // If not leaf, go down to left child first
+            if (!node->leaf)
+                searchRangeRecursive(node->children[i], minK, maxK, results);
+            
+            // Collect this key
+            results.push_back(node->filePositions[i]);
+            i++;
+        }
+
+        // 3. If not leaf, go down to the last child
+        if (!node->leaf)
+            searchRangeRecursive(node->children[i], minK, maxK, results);
+    }
+
+    // --- INSERT LOGIC (Same as before) ---
     void insert(int k, long filePos) {
         if (root == NULL) {
             root = new BTreeNode(t, true);
