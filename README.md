@@ -25,3 +25,21 @@ The project simulates a real-world bioinformatics cloud system where the Fronten
 
 3.  **☁️ Client-Server Architecture:**
     *   Decoupled architecture where the C++ backend runs independently on a server port (8080).
+    ## 🏗️ System Architecture (3-Tier)
+
+```mermaid
+graph LR
+    A[User Laptop] -- HTTP/JSON --> B[AWS Cloud Server]
+    B -- Read/Write --> C[Hard Disk]
+    
+    subgraph Tier 1: Frontend
+    A(React Web App)
+    end
+    
+    subgraph Tier 2: Backend
+    B(C++ Server + B-Tree Logic)
+    end
+    
+    subgraph Tier 3: Storage
+    C(genes.dat Binary File)
+    end
