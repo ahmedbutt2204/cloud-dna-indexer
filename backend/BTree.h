@@ -18,23 +18,31 @@ public:
     }
 
     // --- STANDARD SEARCH (Single Item) ---
+    // Complexity: O(log n)
     long search(int k) {
         return (root == NULL) ? -1 : searchRecursive(root, k);
     }
 
     long searchRecursive(BTreeNode* node, int k) {
         int i = 0;
+        // Find the first key greater than or equal to k
         while (i < node->n && k > node->keys[i])
             i++;
+        
+        // If found, return file position
         if (i < node->n && node->keys[i] == k)
             return node->filePositions[i];
+        
+        // If leaf, key is not here
         if (node->leaf)
             return -1;
+            
+        // Go to appropriate child
         return searchRecursive(node->children[i], k);
     }
 
-    // --- NEW FEATURE: RANGE SEARCH (Find IDs between min and max) ---
-    // Returns a list of File Positions
+    // --- RANGE SEARCH (Find IDs between min and max) ---
+    // Efficiently traverses only the branches within range
     void searchRange(int minK, int maxK, vector<long> &results) {
         if (root != NULL) {
             searchRangeRecursive(root, minK, maxK, results);
@@ -50,21 +58,19 @@ public:
 
         // 2. Iterate through valid keys in this node
         while (i < node->n && node->keys[i] <= maxK) {
-            // If not leaf, go down to left child first
             if (!node->leaf)
                 searchRangeRecursive(node->children[i], minK, maxK, results);
             
-            // Collect this key
             results.push_back(node->filePositions[i]);
             i++;
         }
 
-        // 3. If not leaf, go down to the last child
+        // 3. Visit the last child if needed
         if (!node->leaf)
             searchRangeRecursive(node->children[i], minK, maxK, results);
     }
 
-    // --- INSERT LOGIC (Same as before) ---
+    // --- INSERT LOGIC ---
     void insert(int k, long filePos) {
         if (root == NULL) {
             root = new BTreeNode(t, true);
@@ -108,6 +114,7 @@ private:
         }
     }
 
+    // Splits a full node into two
     void splitChild(BTreeNode *x, int i, BTreeNode *y) {
         BTreeNode *z = new BTreeNode(t, y->leaf);
         z->n = t - 1;
