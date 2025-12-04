@@ -1,73 +1,194 @@
 /* FILE: frontend/src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
 body {
-  background-color: #1e1e1e;
-  color: #ffffff;
-  font-family: 'Courier New', Courier, monospace; /* Scientific look */
   margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f4f7fe;
+  color: #2b3674;
+}
+
+/* --- LAYOUT --- */
+.dashboard-layout {
   display: flex;
-  justify-content: center;
   min-height: 100vh;
 }
 
-.container {
-  width: 600px;
-  text-align: center;
-  margin-top: 50px;
-}
-
-h1 {
-  color: #00d8ff; /* React Blue */
-  border-bottom: 2px solid #00d8ff;
-  padding-bottom: 10px;
-}
-
-.card {
-  background-color: #2d2d2d;
+/* SIDEBAR */
+.sidebar {
+  width: 250px;
+  background-color: #ffffff;
   padding: 20px;
-  margin: 20px 0;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e0e5f2;
 }
 
-h2 {
-  margin-top: 0;
-  color: #4caf50; /* Green for headings */
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4318ff;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-item {
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  color: #a3aed0;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.menu-item.active {
+  background-color: #4318ff;
+  color: white;
+  box-shadow: 0px 4px 12px rgba(67, 24, 255, 0.3);
+}
+
+.menu-item:hover:not(.active) {
+  background-color: #f4f7fe;
+  color: #4318ff;
+}
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  padding: 30px;
+}
+
+.header {
+  margin-bottom: 30px;
+}
+
+.header h2 {
+  font-size: 34px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.header p {
+  color: #707eae;
+  margin: 5px 0 0;
+}
+
+/* GRID SYSTEM */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 25px;
+}
+
+/* CARDS */
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
+  border: none;
+}
+
+.card h3 {
   font-size: 18px;
+  font-weight: 700;
+  color: #2b3674;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f4f7fe;
+  padding-bottom: 15px;
+}
+
+/* FORMS */
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  color: #707eae;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 input {
-  width: 95%;
-  padding: 10px;
-  margin: 10px 0;
-  background-color: #3d3d3d;
-  border: 1px solid #555;
-  color: white;
-  border-radius: 5px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e5f2;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #2b3674;
+  box-sizing: border-box; /* Fixes width issues */
+  transition: 0.3s;
 }
 
-button {
-  background-color: #00d8ff;
-  color: #000;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  font-weight: bold;
-  border-radius: 5px;
+input:focus {
+  border-color: #4318ff;
+  outline: none;
+}
+
+/* BUTTONS */
+.btn-primary {
+  background-color: #4318ff;
+  color: white;
+  padding: 12px;
   width: 100%;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
   margin-top: 10px;
 }
 
-button:hover {
-  background-color: #00b5d6;
+.btn-primary:hover {
+  background-color: #3311db;
+  box-shadow: 0px 4px 12px rgba(67, 24, 255, 0.3);
 }
 
-.result-box {
-  margin-top: 15px;
-  padding: 10px;  
-  background-color: #000;
-  border: 1px solid #4caf50;
-  color: #4caf50;
-  min-height: 50px;
-  white-space: pre-wrap; /* Keeps formatting */
+.btn-secondary {
+  background-color: #fff;
+  border: 2px solid #4318ff;
+  color: #4318ff;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-secondary:hover {
+  background-color: #f4f7fe;
+}
+
+.range-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* LOGS / RESULT AREA */
+.log-area {
+  margin-top: 25px;
+  background: #1b254b;
+  color: #00ff88;
+  padding: 20px;
+  border-radius: 15px;
+  font-family: 'Courier New', monospace;
+  min-height: 80px;
+  box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
+  white-space: pre-wrap;
+}
+
+.log-label {
+  color: #a3aed0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 10px;
 }
