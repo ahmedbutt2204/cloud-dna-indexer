@@ -9,9 +9,13 @@ function App() {
   const [searchName, setSearchName] = useState('');
   const [minRange, setMinRange] = useState('');
   const [maxRange, setMaxRange] = useState('');
+  
+  // New States for Analysis
+  const [analyzeId, setAnalyzeId] = useState('');
+  const [patientSeq, setPatientSeq] = useState('');
+  
   const [message, setMessage] = useState('System ready. Waiting for input...');
 
-  // --- LOGIC FUNCTIONS ---
   const handleAdd = async () => {
     if(!id || !name || !sequence) { setMessage("Error: Please fill all fields"); return; }
     setMessage("Processing... Sending data to Cloud Backend.");
@@ -61,7 +65,18 @@ function App() {
     } catch(error) { setMessage("❌ Connection Failed."); }
   };
 
-  // --- DEMO BUTTON ---
+  const handleAnalyze = async () => {
+    if(!analyzeId || !patientSeq) return;
+    setMessage(`🧬 Comparing Patient DNA with Gene ID ${analyzeId}...`);
+    try {
+      const res = await fetch(`http://localhost:8080/analyze?id=${analyzeId}&sequence=${patientSeq}`, { method: 'POST' });
+      const data = await res.json();
+      if(data.status === "success") {
+         setMessage(`📊 ANALYSIS RESULT:\n• Similarity: ${data.percent}%\n• Diagnosis: ${data.diagnosis}\n• Matched Bases: ${data.match}/${data.total}`);
+      } else { setMessage("❌ Error: Gene ID not found."); }
+    } catch(error) { setMessage("❌ Connection Failed."); }
+  };
+
   const loadDemoData = async () => {
     setMessage("🚀 Loading Demo Data...");
     const demoGenes = [
@@ -79,12 +94,10 @@ function App() {
 
   return (
     <div className="dashboard-layout">
-      {/* SIDEBAR */}
       <div className="sidebar">
         <div className="brand">🧬 DNA Indexer</div>
         <div className="menu-item active">Dashboard</div>
         <div className="menu-item">Analytics</div>
-        <div className="menu-item">Settings</div>
         <div style={{marginTop: 'auto', marginBottom: '10px'}}>
              <button onClick={loadDemoData} style={{background: 'transparent', border: '1px solid #a3aed0', color: '#a3aed0', padding: '5px 10px', cursor: 'pointer', borderRadius: '5px', fontSize: '11px', width: '100%'}}>
                ⚡ Load Demo Data
@@ -93,7 +106,6 @@ function App() {
         <div style={{color: '#a3aed0', fontSize: '12px'}}>v1.0.0 (Pro)</div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div className="main-content">
         <div className="header">
           <h2>Genome Dashboard</h2>
@@ -101,7 +113,6 @@ function App() {
         </div>
 
         <div className="grid-container">
-          {/* CARD 1: ADD */}
           <div className="card">
             <h3>➕ Ingest Data</h3>
             <div className="form-group">
@@ -119,7 +130,6 @@ function App() {
             <button className="btn-primary" onClick={handleAdd}>Index Record</button>
           </div>
 
-          {/* CARD 2: SEARCH */}
           <div className="card">
             <h3>🔍 Query Engine</h3>
             <div className="form-group">
@@ -138,15 +148,23 @@ function App() {
             </div>
           </div>
 
-          {/* CARD 3: RANGE */}
           <div className="card">
              <h3>📊 Advanced Analytics</h3>
-             <label>Range Query (B-Tree Traversal)</label>
+             <label>Range Query (B-Tree)</label>
              <div className="range-group">
-                <input type="number" placeholder="Min ID" value={minRange} onChange={(e) => setMinRange(e.target.value)} />
-                <input type="number" placeholder="Max ID" value={maxRange} onChange={(e) => setMaxRange(e.target.value)} />
+                <input type="number" placeholder="Min" value={minRange} onChange={(e) => setMinRange(e.target.value)} />
+                <input type="number" placeholder="Max" value={maxRange} onChange={(e) => setMaxRange(e.target.value)} />
              </div>
-             <button className="btn-primary" style={{marginTop:'15px', background:'#2b3674'}} onClick={handleRangeSearch}>Run Analysis</button>
+             <button className="btn-primary" style={{marginTop:'15px', background:'#2b3674'}} onClick={handleRangeSearch}>Run Range Search</button>
+          </div>
+
+          <div className="card">
+             <h3>🧬 Mutation Analyzer</h3>
+             <label>Reference Gene ID</label>
+             <input type="number" placeholder="ID (e.g. 101)" value={analyzeId} onChange={(e) => setAnalyzeId(e.target.value)} />
+             <label style={{marginTop:'10px'}}>Patient DNA</label>
+             <input type="text" placeholder="Sequence..." value={patientSeq} onChange={(e) => setPatientSeq(e.target.value)} />
+             <button className="btn-primary" style={{marginTop:'15px', background:'#e91e63'}} onClick={handleAnalyze}>Check Mutation</button>
           </div>
         </div>
 
