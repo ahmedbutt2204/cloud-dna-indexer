@@ -1,36 +1,27 @@
-# Cloud-Based DNA Sequence Indexing System
+# 🧬 Cloud-Based DNA Sequence Indexing System
 
-## 1. Project Overview
-This project is a **Distributed Genome Indexing System** designed to store and efficiently search large datasets of DNA records (Genes). Since DNA data is voluminous, it cannot fit entirely in memory (RAM). This system implements a **custom disk-based storage engine** using **B-Trees** and **Hashing** to manage data on a cloud server.
+### 🚀 A Distributed Genome Search Engine using Advanced Data Structures
 
-This project strictly follows a **3-Tier Architecture** (Frontend → Backend → Custom Database).
+## 📌 Project Overview
+This project is a **3-Tier Full Stack Application** designed to store, index, and retrieve massive amounts of DNA records. Since genetic data is too large to fit into standard memory (RAM), this system implements a **custom file-based database engine** using **B-Trees** for disk storage and **Hashing** for instant lookups.
 
-## 2. Architecture & Technologies
-*   **Tier 1: Frontend (GUI)**
-    *   **Technology:** React.js (Running on Client Laptop)
-    *   **Role:** Provides a user-friendly interface to Add, Delete, and Search genes. It sends HTTP requests to the Cloud Backend.
-*   **Tier 2: Backend (Logic)**
-    *   **Technology:** C++ (Hosted on AWS/Google Cloud)
-    *   **Library:** Crow / cpp-httplib (For API handling)
-    *   **Role:** Processes requests and executes Data Structure logic.
-*   **Tier 3: Database (Storage)**
-    *   **Technology:** Custom C++ File Handling (No SQL/Firebase used)
-    *   **Role:** Implements "Disk Manipulation" by reading/writing binary data files directly.
+The project simulates a real-world bioinformatics cloud system where the Frontend (User) is decoupled from the Backend (Server) and Storage (Disk).
 
-## 3. Data Structures Implementation
-### A. B-Tree (Primary Index - 100% Focus)
-*   **Usage:** Used to store and index **Gene IDs** (Integers).
-*   **Disk Manipulation:** The B-Tree is not just in the RAM; it writes nodes to a hard disk file (`genes.dat`). This allows the system to handle data larger than the available memory.
-*   **Operations:** Insert, Delete, Search, and Range Query (e.g., "Find genes 100 to 500").
+## 🛠️ Tech Stack
+*   **Frontend (Tier 1):** React.js (Dark Mode GUI)
+*   **Backend (Tier 2):** C++ (Custom Multi-threaded HTTP Server)
+*   **Database (Tier 3):** Custom Binary File Storage (No SQL/NoSQL used)
+*   **Networking:** REST API (JSON over HTTP)
 
-### B. Hashing (Secondary Index - 40% Focus)
-*   **Usage:** Used to map **Gene Names** (Strings) to their IDs.
-*   **Technique:** A Hash Table helps in `O(1)` fast lookup when searching for a specific gene name.
+## ⚡ Key Features
+1.  **🧬 B-Tree Indexing (100%):**
+    *   Used to index **Gene IDs**.
+    *   Ensures `O(log n)` search time even for millions of records.
+    *   Implements **Disk Manipulation** (reading/writing nodes to binary files).
 
-## 4. Key Features
-1.  **Cloud Hosting:** The C++ backend runs on a remote Linux Virtual Machine.
-2.  **Custom Persistence:** Implements a mini-database engine from scratch (avoiding MySQL/MongoDB).
-3.  **Networked GUI:** Connects a modern React frontend to a raw C++ backend.
+2.  **⚡ Hashing (40%):**
+    *   Used to index **Gene Names**.
+    *   Provides `O(1)` average time complexity for searching genes by name.
 
-## 5. How to Run
-*(Instructions will be added here as development progresses)*
+3.  **☁️ Client-Server Architecture:**
+    *   Decoupled architecture where the C++ backend runs independently on a server port (8080).
