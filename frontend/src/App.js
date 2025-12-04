@@ -7,101 +7,102 @@ function App() {
   const [sequence, setSequence] = useState('');
   const [searchId, setSearchId] = useState('');
   const [searchName, setSearchName] = useState('');
-  const [message, setMessage] = useState('System Ready... Waiting for Server');
+  const [minRange, setMinRange] = useState('');
+  const [maxRange, setMaxRange] = useState('');
+  const [message, setMessage] = useState('System Ready...');
 
-  // 1. ADD GENE (Connects to C++ POST /add)
   const handleAdd = async () => {
     if(!id || !name || !sequence) { setMessage("Error: Please fill all fields"); return; }
     setMessage("Sending data to Cloud Backend...");
-    
     try {
-      const res = await fetch(`http://localhost:8080/add?id=${id}&name=${name}&sequence=${sequence}`, {
-        method: 'POST'
-      });
-      
+      const res = await fetch(`http://localhost:8080/add?id=${id}&name=${name}&sequence=${sequence}`, { method: 'POST' });
       const data = await res.json();
       if(data.status === "success") {
-        setMessage(`✅ Success! Gene '${name}' (ID: ${id}) saved to B-Tree on Disk.`);
+        setMessage(`✅ Success! Gene '${name}' (ID: ${id}) saved.`);
         setId(''); setName(''); setSequence('');
-      } else {
-        setMessage("Error: Server rejected the data.");
-      }
-    } catch (error) {
-      setMessage(" Error: Could not connect to C++ Backend. Is it running?");
-    }
+      } else { setMessage("❌ Error: Server rejected data."); }
+    } catch (error) { setMessage("❌ Error: Backend not running."); }
   };
 
-  // 2. SEARCH BY ID (Connects to C++ GET /search?id=)
   const handleSearchById = async () => {
     if(!searchId) return;
-    setMessage(`🔍 Querying B-Tree for ID: ${searchId}...`);
-    
     try {
       const res = await fetch(`http://localhost:8080/search?id=${searchId}`);
       const data = await res.json();
-      
-      if (data.found) {
-        setMessage(`✅ FOUND IN DATABASE!\n\nGene Name: ${data.name}\nGene ID: ${searchId}\nSequence: ${data.sequence}`);
-      } else {
-        setMessage(`⚠️ Not Found: ID ${searchId} is not in the B-Tree index.`);
-      }
-    } catch (error) {
-      setMessage("❌ Connection Failed. Check Console.");
-    }
+      if (data.found) setMessage(`✅ FOUND (B-Tree):\nID: ${searchId}\nName: ${data.name}\nSeq: ${data.sequence}`);
+      else setMessage(`⚠️ ID ${searchId} not found.`);
+    } catch (error) { setMessage("❌ Connection Failed."); }
   };
 
-  // 3. SEARCH BY NAME (Connects to C++ GET /search?name=)
   const handleSearchByName = async () => {
     if(!searchName) return;
-    setMessage(`🔍 Hashing Name '${searchName}' to find ID...`);
-    
     try {
       const res = await fetch(`http://localhost:8080/search?name=${searchName}`);
       const data = await res.json();
-      
-      if (data.found) {
-        setMessage(`✅ FOUND VIA HASHING!\n\nGene Name: ${searchName}\nMapped to ID: ${data.id}\nSequence: ${data.sequence}`);
-      } else {
-        setMessage(`⚠️ Not Found: Name '${searchName}' is not in the Hash Table.`);
-      }
-    } catch (error) {
-      setMessage("❌ Connection Failed.");
-    }
+      if (data.found) setMessage(`✅ FOUND (Hashing):\nName: ${searchName}\nID: ${data.id}\nSeq: ${data.sequence}`);
+      else setMessage(`⚠️ Name '${searchName}' not found.`);
+    } catch (error) { setMessage("❌ Connection Failed."); }
+  };
+
+  // --- NEW: RANGE SEARCH ---
+  const handleRangeSearch = async () => {
+    if(!minRange || !maxRange) return;
+    setMessage(`🔍 Searching B-Tree Range [${minRange} - ${maxRange}]...`);
+    try {
+        const res = await fetch(`http://localhost:8080/range?min=${minRange}&max=${maxRange}`);
+        const data = await res.json();
+        
+        if(data.found && data.results.length > 0) {
+            let resultText = `✅ Found ${data.count} Genes in Range:\n`;
+            data.results.forEach(g => {
+                resultText += `• [ID: ${g.id}] ${g.name}\n`;
+            });
+            setMessage(resultText);
+        } else {
+            setMessage("⚠️ No genes found in this range.");
+        }
+    } catch(error) { setMessage("❌ Connection Failed."); }
   };
 
   return (
     <div className="container">
-      <h1>🧬 Cloud DNA Indexer (3-Tier)</h1>
+      <h1>🧬 Cloud DNA Indexer (Advanced)</h1>
       
-      {/* ADD SECTION */}
       <div className="card">
-        <h2>➕ Add New Gene Record</h2>
-        <input type="number" placeholder="Gene ID (e.g., 101)" value={id} onChange={(e) => setId(e.target.value)} />
-        <input type="text" placeholder="Gene Name (e.g., BRCA1)" value={name} onChange={(e) => setName(e.target.value)} />
-        <input type="text" placeholder="DNA Sequence (e.g., ATCG...)" value={sequence} onChange={(e) => setSequence(e.target.value)} />
-        <button onClick={handleAdd}>Save to Cloud Database</button>
+        <h2>➕ Add New Gene</h2>
+        <input type="number" placeholder="ID (e.g., 101)" value={id} onChange={(e) => setId(e.target.value)} />
+        <input type="text" placeholder="Name (e.g., BRCA1)" value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="text" placeholder="Sequence (e.g., ATCG)" value={sequence} onChange={(e) => setSequence(e.target.value)} />
+        <button onClick={handleAdd}>Save</button>
       </div>
 
-      {/* SEARCH SECTION */}
       <div className="card">
-        <h2>🔍 Search Database</h2>
+        <h2>🔍 Search Options</h2>
         
-        <div style={{marginBottom: '20px'}}>
-          <label>Search by ID (B-Tree):</label>
-          <input type="number" placeholder="Enter ID..." value={searchId} onChange={(e) => setSearchId(e.target.value)} />
-          <button onClick={handleSearchById}>Search ID</button>
+        <div style={{marginBottom: '15px'}}>
+            <label>1. Exact ID (B-Tree):</label>
+            <input type="number" placeholder="Enter ID..." value={searchId} onChange={(e) => setSearchId(e.target.value)} />
+            <button onClick={handleSearchById}>Find ID</button>
+        </div>
+
+        <div style={{marginBottom: '15px'}}>
+            <label>2. Exact Name (Hashing):</label>
+            <input type="text" placeholder="Enter Name..." value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+            <button style={{backgroundColor: '#ff9800'}} onClick={handleSearchByName}>Find Name</button>
         </div>
 
         <div>
-          <label>Search by Name (Hashing):</label>
-          <input type="text" placeholder="Enter Name..." value={searchName} onChange={(e) => setSearchName(e.target.value)} />
-          <button onClick={handleSearchByName} style={{backgroundColor: '#ff9800'}}>Search Name</button>
+            <label>3. Range Query (B-Tree Power):</label>
+            <div style={{display:'flex', gap:'10px'}}>
+                <input type="number" placeholder="Min ID" value={minRange} onChange={(e) => setMinRange(e.target.value)} />
+                <input type="number" placeholder="Max ID" value={maxRange} onChange={(e) => setMaxRange(e.target.value)} />
+            </div>
+            <button style={{backgroundColor: '#9c27b0'}} onClick={handleRangeSearch}>Search Range</button>
         </div>
       </div>
 
-      {/* RESULT DISPLAY */}
       <div className="result-box">
-        <strong> System Log:</strong><br/>
+        <strong>> System Log:</strong><br/>
         <pre>{message}</pre>
       </div>
     </div>
