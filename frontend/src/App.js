@@ -24,10 +24,10 @@ function App() {
         setMessage(`✅ Success! Gene '${name}' (ID: ${id}) saved to B-Tree on Disk.`);
         setId(''); setName(''); setSequence('');
       } else {
-        setMessage("❌ Error: Server rejected the data.");
+        setMessage("Error: Server rejected the data.");
       }
     } catch (error) {
-      setMessage("❌ Error: Could not connect to C++ Backend. Is it running?");
+      setMessage(" Error: Could not connect to C++ Backend. Is it running?");
     }
   };
 
