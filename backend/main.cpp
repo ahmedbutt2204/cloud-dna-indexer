@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm> // For min/max
 #include "Gene.h"
 #include "BTree.h"
 #include "HashTable.h"
@@ -168,6 +169,48 @@ int main() {
             } catch(...) { sendResponse(clientSocket, "{ \"found\": false, \"error\": \"Invalid Range\" }"); }
         }
 
+        // HANDLE MUTATION ANALYSIS (POST /analyze)
+        else if (request.find("POST /analyze") != string::npos) {
+            try {
+                size_t idPos = request.find("id=");
+                size_t seqPos = request.find("sequence=");
+                
+                if (idPos != string::npos && seqPos != string::npos) {
+                    size_t idEnd = request.find('&', idPos);
+                    int id = stoi(request.substr(idPos + 3, idEnd - (idPos + 3)));
+                    
+                    size_t seqEnd = request.find(' ', seqPos);
+                    string patientSeq = request.substr(seqPos + 9, seqEnd - (seqPos + 9));
+
+                    long pos = geneIndex.search(id);
+                    if (pos != -1) {
+                        ifstream file(DB_FILE, ios::binary);
+                        file.seekg(pos);
+                        Gene g;
+                        file.read((char*)&g, sizeof(Gene));
+                        string refSeq = string(g.sequence);
+
+                        // Compare DNA
+                        int matches = 0;
+                        int totalLen = min((int)refSeq.length(), (int)patientSeq.length());
+                        for(int i=0; i<totalLen; i++) {
+                            if(refSeq[i] == patientSeq[i]) matches++;
+                        }
+                        double percentage = (double)matches / totalLen * 100.0;
+                        string status = (percentage > 90.0) ? "HEALTHY (Normal)" : "MUTATION DETECTED (High Risk)";
+                        
+                        string json = "{ \"status\": \"success\", \"match\": " + to_string(matches) + 
+                                      ", \"total\": " + to_string(totalLen) + 
+                                      ", \"percent\": " + to_string((int)percentage) + 
+                                      ", \"diagnosis\": \"" + status + "\" }";
+                        sendResponse(clientSocket, json);
+                    } else {
+                        sendResponse(clientSocket, "{ \"status\": \"error\", \"message\": \"Gene ID not found\" }");
+                    }
+                }
+            } catch(...) { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
+        }
+
         // HANDLE ADD (POST /add)
         else if (request.find("POST /add") != string::npos) {
              try {
@@ -178,7 +221,6 @@ int main() {
                     size_t idEnd = request.find('&', idPos);
                     int id = stoi(request.substr(idPos + 3, idEnd - (idPos + 3)));
                     
-                    // --- DUPLICATE CHECK ---
                     if (geneIndex.search(id) != -1) {
                          sendResponse(clientSocket, "{ \"status\": \"error\", \"message\": \"Duplicate ID\" }");
                     } else {
