@@ -3,13 +3,27 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include "Gene.h"
 #include "BTree.h"
 #include "HashTable.h"
 
-#pragma comment(lib, "ws2_32.lib")
+// --- CROSS PLATFORM NETWORKING CODE ---
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "ws2_32.lib")
+    typedef SOCKET SocketType;
+    #define CLOSE_SOCKET closesocket
+    #define SOCKET_ERROR_CODE SOCKET_ERROR
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <unistd.h>
+    typedef int SocketType;
+    #define INVALID_SOCKET -1
+    #define CLOSE_SOCKET close
+    #define SOCKET_ERROR_CODE -1
+#endif
 
 using namespace std;
 
@@ -49,7 +63,7 @@ void loadData() {
 }
 
 // --- SERVER FUNCTIONS ---
-void sendResponse(SOCKET clientSocket, string content) {
+void sendResponse(SocketType clientSocket, string content) {
     string response = 
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: application/json\r\n"
@@ -63,27 +77,29 @@ void sendResponse(SOCKET clientSocket, string content) {
 }
 
 int main() {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) return 1;
+    #ifdef _WIN32
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) return 1;
+    #endif
 
     loadData();
 
-    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    SocketType serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(8080);
 
-    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR_CODE) {
         cout << "Bind failed! Port 8080 busy." << endl;
         return 1;
     }
-    listen(serverSocket, SOMAXCONN);
+    listen(serverSocket, 10);
 
     cout << "=== DNA Cloud Server Running on Port 8080 ===" << endl;
 
     while (true) {
-        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
+        SocketType clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == INVALID_SOCKET) continue;
 
         char buffer[4096] = {0};
@@ -93,7 +109,6 @@ int main() {
         // HANDLE SEARCH (GET /search)
         if (request.find("GET /search") != string::npos) {
             if (request.find("id=") != string::npos) {
-                // Search ID Code (Same as before)
                 size_t idPos = request.find("id=");
                 size_t endPos = request.find(' ', idPos);
                 int id = stoi(request.substr(idPos + 3, endPos - (idPos + 3)));
@@ -108,7 +123,6 @@ int main() {
                 } else { sendResponse(clientSocket, "{ \"found\": false }"); }
             }
             else if (request.find("name=") != string::npos) {
-                // Search Name Code (Same as before)
                 size_t namePos = request.find("name=");
                 size_t endPos = request.find(' ', namePos);
                 string name = request.substr(namePos + 5, endPos - (namePos + 5));
@@ -125,37 +139,30 @@ int main() {
             }
         }
         
-        // --- NEW FEATURE: RANGE SEARCH (GET /range?min=100&max=200) ---
+        // HANDLE RANGE SEARCH (GET /range)
         else if (request.find("GET /range") != string::npos) {
             try {
                 size_t minPos = request.find("min=");
                 size_t maxPos = request.find("max=");
-                
                 if (minPos != string::npos && maxPos != string::npos) {
                     size_t minEnd = request.find('&', minPos);
                     int minVal = stoi(request.substr(minPos + 4, minEnd - (minPos + 4)));
-                    
                     size_t maxEnd = request.find(' ', maxPos);
                     int maxVal = stoi(request.substr(maxPos + 4, maxEnd - (maxPos + 4)));
 
-                    // 1. Get Positions from B-Tree
                     vector<long> positions;
                     geneIndex.searchRange(minVal, maxVal, positions);
 
-                    // 2. Build JSON List
                     string json = "{ \"found\": true, \"count\": " + to_string(positions.size()) + ", \"results\": [";
                     ifstream file(DB_FILE, ios::binary);
-                    
                     for (size_t i = 0; i < positions.size(); i++) {
                         file.seekg(positions[i]);
                         Gene g;
                         file.read((char*)&g, sizeof(Gene));
-                        
                         json += "{ \"id\": " + to_string(g.id) + ", \"name\": \"" + string(g.name) + "\" }";
                         if (i < positions.size() - 1) json += ", ";
                     }
                     json += "] }";
-                    
                     sendResponse(clientSocket, json);
                 }
             } catch(...) { sendResponse(clientSocket, "{ \"found\": false, \"error\": \"Invalid Range\" }"); }
@@ -170,12 +177,18 @@ int main() {
                 if (idPos != string::npos && namePos != string::npos && seqPos != string::npos) {
                     size_t idEnd = request.find('&', idPos);
                     int id = stoi(request.substr(idPos + 3, idEnd - (idPos + 3)));
-                    size_t nameEnd = request.find('&', namePos);
-                    string name = request.substr(namePos + 5, nameEnd - (namePos + 5));
-                    size_t seqEnd = request.find(' ', seqPos);
-                    string seq = request.substr(seqPos + 9, seqEnd - (seqPos + 9));
-                    addGene(id, name, seq);
-                    sendResponse(clientSocket, "{ \"status\": \"success\" }");
+                    
+                    // --- DUPLICATE CHECK ---
+                    if (geneIndex.search(id) != -1) {
+                         sendResponse(clientSocket, "{ \"status\": \"error\", \"message\": \"Duplicate ID\" }");
+                    } else {
+                        size_t nameEnd = request.find('&', namePos);
+                        string name = request.substr(namePos + 5, nameEnd - (namePos + 5));
+                        size_t seqEnd = request.find(' ', seqPos);
+                        string seq = request.substr(seqPos + 9, seqEnd - (seqPos + 9));
+                        addGene(id, name, seq);
+                        sendResponse(clientSocket, "{ \"status\": \"success\" }");
+                    }
                 } else { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
             } catch (...) { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
         }
@@ -185,8 +198,9 @@ int main() {
              send(clientSocket, response.c_str(), response.length(), 0);
         }
 
-        closesocket(clientSocket);
+        CLOSE_SOCKET(clientSocket);
     }
-    WSACleanup();
-    return 0;
-}
+    #ifdef _WIN32
+        WSACleanup();
+    #endif
+    re
