@@ -1,0 +1,23 @@
+# Ignore Mac/Windows system files
+.DS_Store
+Thumbs.db
+
+# Ignore VS Code settings
+.vscode/
+
+# --- BACKEND ---
+# Ignore compiled binaries (we only want source code)
+backend/*.exe
+backend/server
+backend/*.o
+
+# Ignore the local database (Users should create their own)
+backend/genes.dat
+
+# --- FRONTEND ---
+# Ignore huge dependency folders (npm installs these)
+frontend/node_modules/
+frontend/build/
+
+# Ignore local env files
+.env
