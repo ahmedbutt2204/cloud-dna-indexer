@@ -52,3 +52,15 @@ g++ main.cpp -o server -lws2_32
 
 3.  **Run these commands:**
 ```powershell  
+
+## 🔮 Future Scope & Roadmap (v2.0)
+While the current system successfully implements the core 3-Tier architecture and B-Tree indexing, the following features are planned for the next release:
+
+1.  **🧬 3D DNA Visualization:**
+    *   Implementing a WebGL viewer in React to show the double-helix structure of the stored sequences.
+2.  **🔐 User Authentication:**
+    *   Adding JWT (JSON Web Tokens) to the C++ backend to allow secure login for doctors/researchers.
+3.  **⚡ Multi-Threading Optimization:**
+    *   Enhancing the custom server to handle 1000+ concurrent connections using a Thread Pool.
+4.  **cloud-Integration:**
+    *   Dockerizing the application for easy deployment on Kubernetes clusters.
