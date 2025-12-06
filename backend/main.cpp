@@ -8,7 +8,7 @@
 #include "BTree.h"
 #include "HashTable.h"
 
-// --- CROSS PLATFORM NETWORKING CODE ---
+// --- CROSS PLATFORM NETWORKING ---
 #ifdef _WIN32
     #include <winsock2.h>
     #include <ws2tcpip.h>
@@ -31,6 +31,22 @@ using namespace std;
 const string DB_FILE = "genes.dat";
 BTree geneIndex(3);
 HashTable nameIndex;
+
+// --- VALIDATION HELPER ---
+bool isValidSequence(string seq) {
+    string valid = "ATCGU-"; // Allowed characters (DNA/RNA)
+    for (char c : seq) {
+        bool found = false;
+        for (char v : valid) {
+            if (toupper(c) == v) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) return false;
+    }
+    return true;
+}
 
 // --- DATABASE FUNCTIONS ---
 void addGene(int id, string name, string sequence) {
@@ -97,14 +113,8 @@ int main() {
     }
     listen(serverSocket, 10);
 
-    cout << "\n==============================================" << endl;
-    cout << "   🧬 DNA CLOUD SERVER (C++ BACKEND)   " << endl;
-    cout << "==============================================" << endl;
-    cout << "[SYSTEM] Status: ONLINE" << endl;
-    cout << "[SYSTEM] Port:   8080" << endl;
-    cout << "[SYSTEM] Logs:   Enabled" << endl;
-    cout << "----------------------------------------------" << endl;
-    cout << "Waiting for React Client..." << endl;
+    cout << "\n[SYSTEM] DNA Server v1.1 Online (Port 8080)" << endl;
+    cout << "[SYSTEM] Validation Logic: Enabled" << endl;
 
     while (true) {
         SocketType clientSocket = accept(serverSocket, NULL, NULL);
@@ -114,7 +124,6 @@ int main() {
         recv(clientSocket, buffer, 4096, 0);
         string request(buffer);
 
-        // HANDLE SEARCH (GET /search)
         if (request.find("GET /search") != string::npos) {
             if (request.find("id=") != string::npos) {
                 size_t idPos = request.find("id=");
@@ -146,8 +155,6 @@ int main() {
                 } else { sendResponse(clientSocket, "{ \"found\": false }"); }
             }
         }
-        
-        // HANDLE RANGE SEARCH (GET /range)
         else if (request.find("GET /range") != string::npos) {
             try {
                 size_t minPos = request.find("min=");
@@ -157,10 +164,8 @@ int main() {
                     int minVal = stoi(request.substr(minPos + 4, minEnd - (minPos + 4)));
                     size_t maxEnd = request.find(' ', maxPos);
                     int maxVal = stoi(request.substr(maxPos + 4, maxEnd - (maxPos + 4)));
-
                     vector<long> positions;
                     geneIndex.searchRange(minVal, maxVal, positions);
-
                     string json = "{ \"found\": true, \"count\": " + to_string(positions.size()) + ", \"results\": [";
                     ifstream file(DB_FILE, ios::binary);
                     for (size_t i = 0; i < positions.size(); i++) {
@@ -175,13 +180,10 @@ int main() {
                 }
             } catch(...) { sendResponse(clientSocket, "{ \"found\": false, \"error\": \"Invalid Range\" }"); }
         }
-
-        // HANDLE MUTATION ANALYSIS (POST /analyze)
         else if (request.find("POST /analyze") != string::npos) {
             try {
                 size_t idPos = request.find("id=");
                 size_t seqPos = request.find("sequence=");
-                
                 if (idPos != string::npos && seqPos != string::npos) {
                     size_t idEnd = request.find('&', idPos);
                     int id = stoi(request.substr(idPos + 3, idEnd - (idPos + 3)));
@@ -205,8 +207,6 @@ int main() {
                 }
             } catch(...) { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
         }
-
-        // HANDLE ADD (POST /add)
         else if (request.find("POST /add") != string::npos) {
              try {
                 size_t idPos = request.find("id=");
@@ -222,23 +222,25 @@ int main() {
                         string name = request.substr(namePos + 5, nameEnd - (namePos + 5));
                         size_t seqEnd = request.find(' ', seqPos);
                         string seq = request.substr(seqPos + 9, seqEnd - (seqPos + 9));
-                        addGene(id, name, seq);
-                        sendResponse(clientSocket, "{ \"status\": \"success\" }");
+                        
+                        // VALIDATION CHECK
+                        if (!isValidSequence(seq)) {
+                            sendResponse(clientSocket, "{ \"status\": \"error\", \"message\": \"Invalid DNA Characters\" }");
+                        } else {
+                            addGene(id, name, seq);
+                            sendResponse(clientSocket, "{ \"status\": \"success\" }");
+                        }
                     }
                 } else { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
             } catch (...) { sendResponse(clientSocket, "{ \"status\": \"error\" }"); }
         }
-
-        // --- NEW: SYSTEM HEALTH CHECK (GET /health) ---
         else if (request.find("GET /health") != string::npos) {
             sendResponse(clientSocket, "{ \"status\": \"UP\", \"uptime\": \"99.9%\", \"db_connected\": true }");
         }
-        
         else if (request.find("OPTIONS") != string::npos) {
              string response = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n";
              send(clientSocket, response.c_str(), response.length(), 0);
         }
-
         CLOSE_SOCKET(clientSocket);
     }
     #ifdef _WIN32
