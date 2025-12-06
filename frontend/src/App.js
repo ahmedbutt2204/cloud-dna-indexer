@@ -10,25 +10,29 @@ function App() {
   const [minRange, setMinRange] = useState('');
   const [maxRange, setMaxRange] = useState('');
   
-  // New States for Analysis
   const [analyzeId, setAnalyzeId] = useState('');
   const [patientSeq, setPatientSeq] = useState('');
   
   const [message, setMessage] = useState('System ready. Waiting for input...');
+  const [isLoading, setIsLoading] = useState(false); // New Loading State
 
   const handleAdd = async () => {
     if(!id || !name || !sequence) { setMessage("Error: Please fill all fields"); return; }
+    setIsLoading(true);
     setMessage("Processing... Sending data to Cloud Backend.");
     try {
-      const res = await fetch(`http://localhost:8080/add?id=${id}&name=${name}&sequence=${sequence}`, { method: 'POST' });
+      const res = await fetch(`http://localhost:8080/add?id=${id}&name=${name}&sequence=${sequence.toUpperCase()}`, { method: 'POST' });
       const data = await res.json();
       if(data.status === "success") {
         setMessage(`✅ Success! Gene '${name}' (ID: ${id}) has been indexed in the B-Tree.`);
         setId(''); setName(''); setSequence('');
       } else if(data.message === "Duplicate ID") {
         setMessage("⚠️ Error: Duplicate Gene ID. Please use a unique ID.");
+      } else if(data.message === "Invalid DNA Characters") {
+        setMessage("⚠️ Error: Sequence contains invalid characters. Use A, T, C, G only.");
       } else { setMessage("❌ Error: Server rejected data."); }
     } catch (error) { setMessage("❌ Error: Backend connection failed. Is the C++ server running?"); }
+    setIsLoading(false);
   };
 
   const handleSearchById = async () => {
@@ -69,7 +73,7 @@ function App() {
     if(!analyzeId || !patientSeq) return;
     setMessage(`🧬 Comparing Patient DNA with Gene ID ${analyzeId}...`);
     try {
-      const res = await fetch(`http://localhost:8080/analyze?id=${analyzeId}&sequence=${patientSeq}`, { method: 'POST' });
+      const res = await fetch(`http://localhost:8080/analyze?id=${analyzeId}&sequence=${patientSeq.toUpperCase()}`, { method: 'POST' });
       const data = await res.json();
       if(data.status === "success") {
          setMessage(`📊 ANALYSIS RESULT:\n• Similarity: ${data.percent}%\n• Diagnosis: ${data.diagnosis}\n• Matched Bases: ${data.match}/${data.total}`);
@@ -78,6 +82,7 @@ function App() {
   };
 
   const loadDemoData = async () => {
+    setIsLoading(true);
     setMessage("🚀 Loading Demo Data...");
     const demoGenes = [
         {id: 101, name: "BRCA1", seq: "ATCG-CANCER"},
@@ -90,6 +95,7 @@ function App() {
         await fetch(`http://localhost:8080/add?id=${g.id}&name=${g.name}&sequence=${g.seq}`, { method: 'POST' });
     }
     setMessage("✅ Demo Data Loaded! Try searching Range 100-600.");
+    setIsLoading(false);
   };
 
   return (
@@ -99,11 +105,11 @@ function App() {
         <div className="menu-item active">Dashboard</div>
         <div className="menu-item">Analytics</div>
         <div style={{marginTop: 'auto', marginBottom: '10px'}}>
-             <button onClick={loadDemoData} style={{background: 'transparent', border: '1px solid #a3aed0', color: '#a3aed0', padding: '5px 10px', cursor: 'pointer', borderRadius: '5px', fontSize: '11px', width: '100%'}}>
-               ⚡ Load Demo Data
+             <button onClick={loadDemoData} disabled={isLoading} style={{background: 'transparent', border: '1px solid #a3aed0', color: '#a3aed0', padding: '5px 10px', cursor: 'pointer', borderRadius: '5px', fontSize: '11px', width: '100%'}}>
+               {isLoading ? 'Loading...' : '⚡ Load Demo Data'}
              </button>
         </div>
-        <div style={{color: '#a3aed0', fontSize: '12px'}}>v1.0.0 (Pro)</div>
+        <div style={{color: '#a3aed0', fontSize: '12px'}}>v1.1.0 (Stable)</div>
       </div>
 
       <div className="main-content">
@@ -127,7 +133,9 @@ function App() {
                 <label>DNA Sequence</label>
                 <input type="text" placeholder="e.g. ATCG-GCTA" value={sequence} onChange={(e) => setSequence(e.target.value)} />
             </div>
-            <button className="btn-primary" onClick={handleAdd}>Index Record</button>
+            <button className="btn-primary" onClick={handleAdd} disabled={isLoading}>
+                {isLoading ? 'Indexing...' : 'Index Record'}
+            </button>
           </div>
 
           <div className="card">
