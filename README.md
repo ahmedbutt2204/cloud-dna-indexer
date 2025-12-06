@@ -63,4 +63,17 @@ While the current system successfully implements the core 3-Tier architecture an
 3.  **⚡ Multi-Threading Optimization:**
     *   Enhancing the custom server to handle 1000+ concurrent connections using a Thread Pool.
 4.  **cloud-Integration:**
-    *   Dockerizing the application for easy deployment on Kubernetes clusters.
+    *   Dockerizing the application for easy deployment on Kubernetes clusters.                 
+    ## 🔌 API Reference (Internal)
+The Frontend (Tier 1) communicates with the Backend (Tier 2) using these endpoints:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/add` | Adds a new gene. Params: `id`, `name`, `sequence`. |
+| `GET` | `/search` | Finds a gene. Params: `id` OR `name`. |
+| `GET` | `/range` | Returns list of genes. Params: `min`, `max`. |
+| `POST` | `/analyze` | Compares DNA. Params: `id`, `sequence`. |
+| `GET` | `/health` | System status check (Heartbeat). |
+
+---
+**Last Updated:** Dec 6, 2025 (v1.1 Stable)
