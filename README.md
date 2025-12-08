@@ -68,3 +68,23 @@ code
 Code
 **👉 Terminal Commands:**
 ```powershell
+
+## 📂 Project Structure
+
+```text
+cloud-dna-indexer/
+├── 📂 backend/              # C++ Server Logic
+│   ├── main.cpp             # Server Entry Point & API Handler
+│   ├── BTree.h              # Core B-Tree Implementation
+│   ├── HashTable.h          # Hashing Logic
+│   ├── Gene.h               # Data Structure Definition
+│   └── genes.dat            # Binary Database File
+│
+├── 📂 frontend/             # React.js GUI
+│   ├── src/
+│   │   ├── App.js           # Dashboard Logic
+│   │   └── App.css          # Enterprise Styling
+│   └── package.json
+│
+├── LICENSE                  # MIT License
+└── README.md                # Project Documentation
