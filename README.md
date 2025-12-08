@@ -42,3 +42,29 @@ The Frontend communicates with the C++ Backend via JSON over HTTP:
 *   `GET /search` - Find record by ID (B-Tree) or Name (Hash).
 *   `GET /range` - Fetch multiple records via Tree Traversal.
 *   `POST /analyze` - Run Mutation detection algorithm.
+
+## 🚀 How to Run locally
+
+### Prerequisites
+*   **C++ Compiler:** MinGW (Windows) or G++ (Linux/Mac).
+*   **Node.js:** v16+ (For the Frontend).
+
+### Step 1: Start the Backend (The Brain)
+Open a terminal in the `backend/` folder:
+```bash
+cd backend
+g++ main.cpp -o server -lws2_32  # For Windows
+./server
+
+Server will start listening on Port 8080.
+Step 2: Start the Frontend (The Interface)
+Open a new terminal in the frontend/ folder:
+code
+Bash
+cd frontend
+npm start
+The Dashboard will launch automatically at http://localhost:3000.
+code
+Code
+**👉 Terminal Commands:**
+```powershell
