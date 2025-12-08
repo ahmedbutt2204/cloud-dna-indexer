@@ -25,3 +25,20 @@ The system features a decoupled **3-Tier Architecture**, separating the React GU
 ### 3. 🛡️ System Integrity
 *   **Duplicate Protection:** Prevents data corruption by validating IDs before insertion.
 *   **Input Sanitization:** Ensures only valid DNA characters (A, T, C, G) are stored.
+
+## 🛠️ Technical Architecture (3-Tier)
+
+This project strictly follows the **Client-Server-Storage** model:
+
+| Tier | Component | Technology | Description |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | **Presentation** | React.js (SaaS UI) | Provides a responsive Medical Dashboard for doctors/researchers. |
+| **Tier 2** | **Application** | C++ (Native Server) | Multi-threaded Socket Server running on Port 8080. Handles logic & algorithms. |
+| **Tier 3** | **Data** | Binary Files | Custom `genes.dat` file manipulated via `fstream` (Seek/Tell). |
+
+### 🔌 API Endpoints
+The Frontend communicates with the C++ Backend via JSON over HTTP:
+*   `POST /add` - Index a new gene record.
+*   `GET /search` - Find record by ID (B-Tree) or Name (Hash).
+*   `GET /range` - Fetch multiple records via Tree Traversal.
+*   `POST /analyze` - Run Mutation detection algorithm.
