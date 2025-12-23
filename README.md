@@ -1,79 +1,76 @@
 # 🧬 Cloud-Based DNA Sequence Indexing System
 
-### A Distributed Genome Search Engine using Advanced Data Structures
+![C++](https://img.shields.io/badge/Backend-C++17-blue?style=for-the-badge&logo=c%2B%2B)
+![React](https://img.shields.io/badge/Frontend-React.js-61DAFB?style=for-the-badge&logo=react)
+![Architecture](https://img.shields.io/badge/Architecture-3--Tier-orange?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+> **A High-Performance Distributed System for Genomic Data Analysis and Storage.**
+
+---
 
 ## 📌 Project Overview
-This project is a **3-Tier Full Stack Application** designed to store, index, and retrieve massive amounts of DNA records. Since genetic data is too large to fit into standard memory (RAM), this system implements a **custom file-based database engine** using **B-Trees** for disk storage and **Hashing** for instant lookups.
+This project is a **3-Tier Full Stack Application** designed to store, index, and retrieve massive amounts of DNA records efficiently. In the field of Bioinformatics, genetic datasets are often too voluminous to reside entirely in standard memory (RAM).
 
-The project simulates a real-world bioinformatics cloud system where the Frontend (User) is decoupled from the Backend (Server) and Storage (Disk).
+To solve this, we implemented a **Custom Disk-Based Database Engine** from scratch in C++. It utilizes **B-Trees** for persistent disk storage and efficient retrieval, and **Hash Tables** for instant memory-mapped lookups. The system simulates a real-world cloud architecture where the Frontend (User) is decoupled from the Backend (Server) and Storage (Disk).
 
-## 🎯 Problem Statement
-*   **Big Data:** DNA sequences are massive. Storing them in arrays or linked lists causes Memory Overflow.
-*   **Search Latency:** Finding a specific gene in a billion records takes too long with linear search.
-*   **Solution:** We use **B-Trees** (Order 3) to minimize disk reads and **Hashing** for O(1) name lookups.
-## 🛠️ Tech Stack & Architecture
+---
 
-### 🏗️ 3-Tier Architecture
-This project strictly follows the **Client-Server-Database** model:
+## ✨ Key Features
 
-*   **Tier 1: Frontend (React.js)**
-    *   Provides a professional SaaS-style dashboard.
-    *   Communicates with the backend via **JSON over HTTP**.
-    *   Features: Dark/Light mode, Data Visualization, Range Query UI.
+### 1. 🔍 Advanced Query Engine
+*   **B-Tree Indexing (Degree 3):** Implements a self-balancing tree structure for `O(log n)` retrieval of Gene IDs directly from the disk.
+*   **Hash Mapping:** Uses a custom chaining Hash Table for `O(1)` instant lookup by Gene Name.
+*   **Range Analytics:** Intelligently traverses tree nodes to fetch specific clusters of genes (e.g., *Find all genes between ID 100 and 500*).
 
-*   **Tier 2: Backend (C++ Custom Server)**
-    *   A custom-written **Multi-threaded HTTP Server** using raw Sockets (`winsock2`).
-    *   Handles API requests (`/add`, `/search`, `/range`).
-    *   Manages memory and file pointers.
+### 2. 🧬 Mutation Analysis (Bioinformatics)
+*   **Sequence Alignment:** Built-in algorithm to compare patient DNA samples against stored reference genes.
+*   **Risk Diagnosis:** Calculates mutation percentage (Hamming Distance) and determines health risk levels (Healthy vs. Mutation Detected).
 
-*   **Tier 3: Database (Custom Binary Storage)**
-    *   **No SQL/NoSQL used.**
-    *   Data is written to `genes.dat` in binary format.
-    *   **Disk Manipulation:** Implemented using `fstream` `seekp` and `tellp`.
+### 3. 🛡️ System Integrity & Security
+*   **Duplicate Protection:** Prevents data corruption by validating IDs before insertion.
+*   **Input Sanitization:** Enforces strict DNA syntax validation (only A, T, C, G characters allowed).
+*   **Disk Persistence:** Data survives server restarts via binary file manipulation (`genes.dat`).
 
-### 🧩 Data Structures Used
-| Structure | Usage | Complexity |
-| :--- | :--- | :--- |
-| **B-Tree** | Indexing Gene IDs & Range Queries | `O(log n)` |
-| **Hash Table** | Indexing Gene Names | `O(1)` |
-| **Vector** | Temporary storage for range results | `O(n)` |
-## 🚀 How to Run
+---
 
-### Prerequisities
-*   **C++ Compiler:** MinGW (Windows) or G++ (Linux)
-*   **Node.js:** For the React Frontend
+## 🛠️ Technical Architecture (3-Tier)
+
+The system strictly follows the **Client-Server-Storage** distributed model:
+
+| Tier | Component | Technology | Description |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | **Presentation** | React.js | Professional Medical Dashboard with Dark/Light modes and responsive Grid layout. |
+| **Tier 2** | **Application** | C++ (Native) | Multi-threaded Custom HTTP Server using raw Sockets (Winsock/Linux). Handles API logic. |
+| **Tier 3** | **Data** | Binary Files | Custom `genes.dat` database manipulated via `fstream` (Seek/Tell) for block storage. |
+
+---
+
+## 🔌 API Reference (Internal)
+
+The Frontend communicates with the C++ Backend via **JSON over HTTP**.
+
+| Method | Endpoint | Params | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/add` | `id`, `name`, `sequence` | Index a new gene record to B-Tree and Disk. |
+| `GET` | `/search` | `id` OR `name` | Find a specific record. |
+| `GET` | `/range` | `min`, `max` | Fetch a list of genes within a numeric ID range. |
+| `POST` | `/analyze` | `id`, `sequence` | Run mutation detection algorithm against a reference gene. |
+| `GET` | `/health` | *None* | System heartbeat check. |
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+*   **C++ Compiler:** MinGW (Windows) or G++ (Linux/Mac)
+*   **Node.js:** v16+ (For the Frontend)
 
 ### Step 1: Start the Backend (The Brain)
 Open a terminal in the `backend/` folder:
 ```bash
 cd backend
-g++ main.cpp -o server -lws2_32
-./server
+g++ main.cpp -o server -lws2_32   # Windows Command
+# OR: g++ main.cpp -o server      # Linux/Mac Command
 
-3.  **Run these commands:**
-```powershell  
-
-## 🔮 Future Scope & Roadmap (v2.0)
-While the current system successfully implements the core 3-Tier architecture and B-Tree indexing, the following features are planned for the next release:
-
-1.  **🧬 3D DNA Visualization:**
-    *   Implementing a WebGL viewer in React to show the double-helix structure of the stored sequences.
-2.  **🔐 User Authentication:**
-    *   Adding JWT (JSON Web Tokens) to the C++ backend to allow secure login for doctors/researchers.
-3.  **⚡ Multi-Threading Optimization:**
-    *   Enhancing the custom server to handle 1000+ concurrent connections using a Thread Pool.
-4.  **cloud-Integration:**
-    *   Dockerizing the application for easy deployment on Kubernetes clusters.                 
-    ## 🔌 API Reference (Internal)
-The Frontend (Tier 1) communicates with the Backend (Tier 2) using these endpoints:
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/add` | Adds a new gene. Params: `id`, `name`, `sequence`. |
-| `GET` | `/search` | Finds a gene. Params: `id` OR `name`. |
-| `GET` | `/range` | Returns list of genes. Params: `min`, `max`. |
-| `POST` | `/analyze` | Compares DNA. Params: `id`, `sequence`. |
-| `GET` | `/health` | System status check (Heartbeat). |
-
----
-**Last Updated:** Dec 6, 2025 (v1.1 Stable)
+./server 
