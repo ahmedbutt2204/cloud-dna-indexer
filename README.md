@@ -28,7 +28,7 @@ To solve this, we implemented a **Custom Disk-Based Database Engine** from scrat
 *   **Risk Diagnosis:** Calculates mutation percentage (Hamming Distance) and determines health risk levels (Healthy vs. Mutation Detected).
 
 ### 3. 🛡️ System Integrity & Security
-*   **Duplicate Protection:** Prevents data corruption by validating IDs before insertion.
+*   **Duplicate Protection:** Prevents data corruption by checking the B-Tree before insertion.
 *   **Input Sanitization:** Enforces strict DNA syntax validation (only A, T, C, G characters allowed).
 *   **Disk Persistence:** Data survives server restarts via binary file manipulation (`genes.dat`).
 
@@ -73,4 +73,4 @@ cd backend
 g++ main.cpp -o server -lws2_32   # Windows Command
 # OR: g++ main.cpp -o server      # Linux/Mac Command
 
-./server 
+./server
